@@ -1,12 +1,12 @@
-﻿# FastAPI Migration (HTML_DITA_Backend)
+# FastAPI Migration (HTML_DITA_Backend)
 
 This folder contains a FastAPI implementation of the original Express API.
 
 ## Endpoints
 
 - `GET /`
-- `POST /api/pre-flight-check`
-- `POST /api/htmltodita`
+- `POST /api/convert` (single API with live streaming progress)
+- `POST /api/pre-flight-check` (backward-compatible alias to `/api/convert`)
 - `GET /api/download/{user_id}/{download_id}`
 - `POST /api/insertDitaTag`
 - `GET /api/insertDitaTag`
@@ -36,10 +36,20 @@ MONGODB_URI=mongodb://localhost:27017
 MONGODB_DB=htmltodita
 ```
 
+## Conversion Flow (Single Streaming API)
+
+1. Call `POST /api/convert` with `multipart/form-data` (`zipFile` file; optional `userId`).
+2. Read the response stream (SSE-formatted chunks).
+3. Update UI stepper from each event payload.
+4. On `completed` event, use `downloadLink` for file download.
+
+## Stream Events
+
+- Event types: `progress`, `failed`, `completed`
+- Events are intentionally paced with a `2s` delay between step updates for clearer UI progression.
+- Payload fields: `message`, `status`, `userId`, `jobState`, `currentStep`, `steps`, optional `failedStep`, optional `invalidFiles`, optional `downloadLink`
+
 ## Notes
 
-- `/api/pre-flight-check` expects `multipart/form-data` with:
-  - `userId` (text)
-  - `zipFile` (file). It also accepts `file` or `zip`.
-- `/api/htmltodita` accepts JSON or form-data with `userId`.
+- `userId` is optional and defaults to `default`.
 - Output archives are created under `downloads/<download_id>/` and deleted after download.

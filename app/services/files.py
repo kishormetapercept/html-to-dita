@@ -1,4 +1,4 @@
-﻿import re
+import re
 import shutil
 import zipfile
 from html import escape
@@ -182,3 +182,14 @@ def resolve_zip_file(download_dir: str, expected_name: Optional[str] = None) -> 
 
 def remove_directory(path: str) -> None:
     shutil.rmtree(path, ignore_errors=True)
+
+def clear_directory_contents(path: str) -> None:
+    directory = Path(path)
+    if not directory.exists() or not directory.is_dir():
+        return
+
+    for child in directory.iterdir():
+        if child.is_dir():
+            shutil.rmtree(child, ignore_errors=True)
+        else:
+            child.unlink(missing_ok=True)

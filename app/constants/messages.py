@@ -16,5 +16,11 @@ FILES_CONVERTED_SUCCESSFULLY = "Files converted successfully."
 ERROR_PROCESSING_FILES = "Error processing files."
 FILE_NOT_FOUND = "File not found"
 
+CONVERSION_STARTED = "Conversion started."
+PREFLIGHT_CHECK_IN_PROGRESS = "Pre-flight check in progress."
+TRANSFORMATION_IN_PROGRESS = "Transformation in progress."
+POSTFLIGHT_CHECK_IN_PROGRESS = "Post-flight check in progress."
+DOWNLOAD_READY = "Download is ready."
+
 TAGS_PROCESSED_SUCCESSFULLY = "Tags processed successfully"
 TAGS_FETCHED_SUCCESSFULLY = "Tags Fetched successfully"
