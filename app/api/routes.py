@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -169,6 +169,19 @@ async def _pipeline_event_stream(user_id: str, file_name: str, input_dir: str, o
             return
 
         steps[STEP_PREFLIGHT] = True
+        yield _sse_event(
+            "step_completed",
+            _step_payload(
+                message=msg.PREFLIGHT_CHECK_COMPLETED,
+                status=202,
+                steps=steps,
+                current_step=STEP_PREFLIGHT,
+                user_id=user_id,
+                job_state="running",
+            ),
+        )
+        await asyncio.sleep(STREAM_EVENT_DELAY_SECONDS)
+
         current_step = STEP_TRANSFORMATION
         yield _sse_event(
             "progress",
@@ -202,6 +215,18 @@ async def _pipeline_event_stream(user_id: str, file_name: str, input_dir: str, o
 
         write_ditamap(output_dir, dita_files)
         steps[STEP_TRANSFORMATION] = True
+        yield _sse_event(
+            "step_completed",
+            _step_payload(
+                message=msg.TRANSFORMATION_COMPLETED,
+                status=202,
+                steps=steps,
+                current_step=STEP_TRANSFORMATION,
+                user_id=user_id,
+                job_state="running",
+            ),
+        )
+        await asyncio.sleep(STREAM_EVENT_DELAY_SECONDS)
 
         current_step = STEP_POSTFLIGHT
         yield _sse_event(
@@ -225,6 +250,19 @@ async def _pipeline_event_stream(user_id: str, file_name: str, input_dir: str, o
         create_zip_archive(output_dir, str(output_zip_path))
 
         steps[STEP_POSTFLIGHT] = True
+        yield _sse_event(
+            "step_completed",
+            _step_payload(
+                message=msg.POSTFLIGHT_CHECK_COMPLETED,
+                status=202,
+                steps=steps,
+                current_step=STEP_POSTFLIGHT,
+                user_id=user_id,
+                job_state="running",
+            ),
+        )
+        await asyncio.sleep(STREAM_EVENT_DELAY_SECONDS)
+
         steps[STEP_DOWNLOAD] = True
 
         _cleanup_user_data(user_id)

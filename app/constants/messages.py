@@ -18,8 +18,11 @@ FILE_NOT_FOUND = "File not found"
 
 CONVERSION_STARTED = "Conversion started."
 PREFLIGHT_CHECK_IN_PROGRESS = "Pre-flight check in progress."
+PREFLIGHT_CHECK_COMPLETED = "Pre-flight check completed."
 TRANSFORMATION_IN_PROGRESS = "Transformation in progress."
+TRANSFORMATION_COMPLETED = "Transformation completed."
 POSTFLIGHT_CHECK_IN_PROGRESS = "Post-flight check in progress."
+POSTFLIGHT_CHECK_COMPLETED = "Post-flight check completed."
 DOWNLOAD_READY = "Download is ready."
 
 TAGS_PROCESSED_SUCCESSFULLY = "Tags processed successfully"
