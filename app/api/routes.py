@@ -5,10 +5,11 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.background import BackgroundTask
 
+from app.constants import messages as msg
 from app.core.config import get_settings
 from app.db.mongo import get_db
 from app.models.runtime_state import state_store
-from app.schemas.auth import LoginRequest, RegisterRequest, TagItem
+from app.schemas.auth import TagItem
 from app.services.files import (
     create_zip_archive,
     convert_input_to_dita,
@@ -21,16 +22,21 @@ from app.services.files import (
     save_and_extract_zip,
     write_ditamap,
 )
-from app.services.security import create_access_token, hash_password, verify_password
 
 
 router = APIRouter()
 settings = get_settings()
+DEFAULT_USER_ID = "default"
+
+
+def _resolve_user_id(raw_user_id: str) -> str:
+    user_id = (raw_user_id or "").strip()
+    return user_id or DEFAULT_USER_ID
 
 
 @router.get("/")
 async def health_check():
-    return {"message": "Html2Dita Backend", "status": "Online"}
+    return {"message": msg.APP_NAME, "status": msg.APP_STATUS_ONLINE}
 
 
 @router.post("/api/pre-flight-check")
@@ -40,19 +46,17 @@ async def pre_flight_check(request: Request):
     except Exception:
         return JSONResponse(
             status_code=400,
-            content={"message": "Invalid multipart/form-data payload.", "status": 400},
+            content={"message": msg.INVALID_MULTIPART_PAYLOAD, "status": 400},
         )
 
-    user_id = str(form.get("userId") or "").strip()
-    if not user_id:
-        return JSONResponse(status_code=400, content={"message": "userId is required", "status": 400})
+    user_id = _resolve_user_id(str(form.get("userId") or ""))
 
     upload = form.get("zipFile") or form.get("file") or form.get("zip")
     if upload is None or not hasattr(upload, "file"):
         return JSONResponse(
             status_code=400,
             content={
-                "message": "No zip file provided. Send multipart/form-data with fields: userId (text) and zipFile (file).",
+                "message": msg.NO_ZIP_FILE_PROVIDED,
                 "status": 400,
             },
         )
@@ -69,7 +73,7 @@ async def pre_flight_check(request: Request):
             remove_user_io_directories(user_id, settings.input_root, settings.output_root)
             return JSONResponse(
                 status_code=400,
-                content={"message": "No html files found in zip file.", "status": 400},
+                content={"message": msg.NO_HTML_FILES_FOUND, "status": 400},
             )
 
         invalid_files = find_html_without_title(html_files, input_dir)
@@ -78,43 +82,37 @@ async def pre_flight_check(request: Request):
             return JSONResponse(
                 status_code=400,
                 content={
-                    "message": "The following files do not contain a title.",
+                    "message": msg.FILES_WITHOUT_TITLE,
                     "status": 400,
                     "invalidFiles": invalid_files,
                 },
             )
 
-        return JSONResponse(status_code=201, content={"message": "Ok", "status": 201})
+        return JSONResponse(status_code=201, content={"message": msg.OK, "status": 201})
     except ValueError as error:
         remove_user_io_directories(user_id, settings.input_root, settings.output_root)
         return JSONResponse(status_code=400, content={"message": str(error), "status": 400})
     except Exception:
         remove_user_io_directories(user_id, settings.input_root, settings.output_root)
-        return JSONResponse(status_code=500, content={"message": "Internal server error", "status": 500})
+        return JSONResponse(status_code=500, content={"message": msg.INTERNAL_SERVER_ERROR, "status": 500})
 
 
 @router.post("/api/htmltodita")
 async def html_to_dita(request: Request):
-    user_id = ""
+    user_id = DEFAULT_USER_ID
     content_type = request.headers.get("content-type", "").lower()
 
     try:
         if "application/json" in content_type:
             payload = await request.json()
-            user_id = str(payload.get("userId") or "").strip()
+            user_id = _resolve_user_id(str(payload.get("userId") or ""))
         else:
             form = await request.form()
-            user_id = str(form.get("userId") or "").strip()
+            user_id = _resolve_user_id(str(form.get("userId") or ""))
     except Exception:
         return JSONResponse(
             status_code=400,
-            content={"message": "Invalid request payload.", "status": 400},
-        )
-
-    if not user_id:
-        return JSONResponse(
-            status_code=400,
-            content={"message": "userId is required", "status": 400},
+            content={"message": msg.INVALID_REQUEST_PAYLOAD, "status": 400},
         )
 
     state = state_store.get(user_id)
@@ -124,7 +122,7 @@ async def html_to_dita(request: Request):
     if not Path(input_dir).exists():
         return JSONResponse(
             status_code=404,
-            content={"message": "Please upload zip file first!", "status": 404},
+            content={"message": msg.PLEASE_UPLOAD_ZIP_FIRST, "status": 404},
         )
 
     try:
@@ -132,7 +130,7 @@ async def html_to_dita(request: Request):
         if not dita_files:
             return JSONResponse(
                 status_code=400,
-                content={"message": "No html files found in zip file.", "status": 400},
+                content={"message": msg.NO_HTML_FILES_FOUND, "status": 400},
             )
 
         write_ditamap(output_dir, dita_files)
@@ -152,14 +150,14 @@ async def html_to_dita(request: Request):
         return JSONResponse(
             status_code=200,
             content={
-                "message": "Files converted successfully.",
+                "message": msg.FILES_CONVERTED_SUCCESSFULLY,
                 "downloadLink": download_link,
                 "status": 200,
             },
         )
     except Exception:
         remove_user_io_directories(user_id, settings.input_root, settings.output_root)
-        return JSONResponse(status_code=500, content={"message": "Error processing files.", "status": 500})
+        return JSONResponse(status_code=500, content={"message": msg.ERROR_PROCESSING_FILES, "status": 500})
 
 
 @router.get("/api/download/{user_id}/{download_id}")
@@ -169,7 +167,7 @@ async def download(user_id: str, download_id: str):
     zip_file = resolve_zip_file(str(download_dir), state.input_file_name)
 
     if zip_file is None:
-        return JSONResponse(status_code=404, content={"message": "File not found", "status": 404})
+        return JSONResponse(status_code=404, content={"message": msg.FILE_NOT_FOUND, "status": 404})
 
     state_store.clear_input_file_name(user_id)
     return FileResponse(
@@ -177,49 +175,6 @@ async def download(user_id: str, download_id: str):
         media_type="application/octet-stream",
         filename=zip_file.name,
         background=BackgroundTask(remove_directory, str(download_dir)),
-    )
-
-
-@router.post("/api/register")
-async def register(payload: RegisterRequest):
-    db = get_db()
-    users = db["users"]
-
-    if users.find_one({"email": payload.email}):
-        return JSONResponse(status_code=400, content={"message": "User registration failed", "status": 400})
-
-    users.insert_one(
-        {
-            "email": payload.email,
-            "password": hash_password(payload.password),
-            "lastLogin": None,
-        }
-    )
-    return JSONResponse(status_code=201, content={"message": "User registered", "status": 201})
-
-
-@router.post("/api/login")
-async def login(payload: LoginRequest):
-    db = get_db()
-    users = db["users"]
-    user = users.find_one({"email": payload.email})
-
-    if user is None or not verify_password(payload.password, user.get("password", "")):
-        return JSONResponse(
-            status_code=401,
-            content={"message": "Invalid email or password", "status": 401},
-        )
-
-    users.update_one({"_id": user["_id"]}, {"$currentDate": {"lastLogin": True}})
-    token = create_access_token(str(user["_id"]))
-    return JSONResponse(
-        status_code=200,
-        content={
-            "message": "Login successful",
-            "status": 200,
-            "token": token,
-            "userId": str(user["_id"]),
-        },
     )
 
 
@@ -233,7 +188,7 @@ async def insert_dita_tags(tags: list[TagItem]):
 
     return JSONResponse(
         status_code=200,
-        content={"message": "Tags processed successfully", "status": 200},
+        content={"message": msg.TAGS_PROCESSED_SUCCESSFULLY, "status": 200},
     )
 
 
@@ -243,5 +198,5 @@ async def get_dita_tags():
     tags = [{"key": item["key"], "value": item["value"]} for item in db["ditaTag"].find({}, {"_id": 0})]
     return JSONResponse(
         status_code=201,
-        content={"message": "Tags Fetched successfully", "status": 201, "tags": tags},
+        content={"message": msg.TAGS_FETCHED_SUCCESSFULLY, "status": 201, "tags": tags},
     )

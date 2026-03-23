@@ -11,10 +11,6 @@ class Settings(BaseSettings):
     mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_db: str = "htmltodita"
 
-    jwt_secret: str = "change-me"
-    jwt_algorithm: str = "HS256"
-    jwt_expire_minutes: int = 10080
-
     input_root: str = "input"
     output_root: str = "output"
     downloads_root: str = "downloads"

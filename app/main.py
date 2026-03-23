@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routes import router
+from app.constants import messages as msg
 from app.core.config import get_settings
 
 
@@ -15,7 +16,7 @@ app = FastAPI(title=settings.app_name)
 async def validation_exception_handler(_: Request, __: RequestValidationError):
     return JSONResponse(
         status_code=422,
-        content={"message": "Invalid request payload.", "status": 422},
+        content={"message": msg.INVALID_REQUEST_PAYLOAD, "status": 422},
     )
 
 
