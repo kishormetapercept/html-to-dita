@@ -1,12 +1,16 @@
-﻿from functools import lru_cache
+from functools import lru_cache
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     app_name: str = "Html2Dita Backend (FastAPI)"
     port: int = 8000
-    base: str = "http://localhost:8000"
+    base: str = Field(
+        default="http://localhost:8000",
+        validation_alias=AliasChoices("BASE", "BASE_URL"),
+    )
 
     mongodb_uri: str = "mongodb://localhost:27017"
     mongodb_db: str = "htmltodita"

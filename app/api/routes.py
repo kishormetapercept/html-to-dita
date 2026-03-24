@@ -82,6 +82,20 @@ def _streaming_response(generator):
     )
 
 
+def _resolve_download_base_url(request: Request) -> str:
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").strip()
+    forwarded_host = request.headers.get("x-forwarded-host", "").strip()
+    forwarded_prefix = request.headers.get("x-forwarded-prefix", "").strip()
+
+    if forwarded_proto and forwarded_host:
+        base = f"{forwarded_proto}://{forwarded_host}"
+        if forwarded_prefix:
+            base = f"{base}/{forwarded_prefix.strip('/')}"
+        return base.rstrip("/")
+
+    return str(request.base_url).rstrip("/")
+
+
 def _step_payload(
     *,
     message: str,
@@ -116,7 +130,7 @@ async def _single_event_stream(event_type: str, payload: dict):
     yield _sse_event(event_type, payload)
 
 
-async def _pipeline_event_stream(user_id: str, file_name: str, input_dir: str, output_dir: str):
+async def _pipeline_event_stream(user_id: str, file_name: str, input_dir: str, output_dir: str, download_base_url: str):
     steps = _initial_steps()
     steps[STEP_UPLOAD] = True
 
@@ -269,7 +283,7 @@ async def _pipeline_event_stream(user_id: str, file_name: str, input_dir: str, o
 
         _cleanup_user_data(user_id)
 
-        download_link = f"{settings.base}/api/download/{user_id}/{download_id}"
+        download_link = f"{download_base_url}/api/download/{user_id}/{download_id}"
         current_step = STEP_DOWNLOAD
         yield _sse_event(
             "completed",
@@ -351,6 +365,8 @@ async def convert(request: Request):
         gateway_user_email,
     )
 
+    download_base_url = _resolve_download_base_url(request)
+
     upload = form.get("zipFile") or form.get("file") or form.get("zip")
     if upload is None or not hasattr(upload, "file"):
         return _streaming_response(
@@ -405,7 +421,7 @@ async def convert(request: Request):
             )
         )
 
-    return _streaming_response(_pipeline_event_stream(user_id, file_name, input_dir, output_dir))
+    return _streaming_response(_pipeline_event_stream(user_id, file_name, input_dir, output_dir, download_base_url))
 
 
 @router.post("/api/pre-flight-check")
@@ -447,3 +463,4 @@ async def get_dita_tags():
     db = get_db()
     tags = [{"key": item["key"], "value": item["value"]} for item in db["ditaTag"].find({}, {"_id": 0})]
     return _response(201, msg.TAGS_FETCHED_SUCCESSFULLY, tags=tags)
+
