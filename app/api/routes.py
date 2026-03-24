@@ -1,5 +1,6 @@
-﻿import asyncio
+import asyncio
 import json
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -27,6 +28,7 @@ from app.services.files import (
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger('html_to_dita.routes')
 DEFAULT_USER_ID = "default"
 STEP_UPLOAD = "uploadFiles"
 STEP_PREFLIGHT = "preFlightCheck"
@@ -336,7 +338,19 @@ async def convert(request: Request):
             )
         )
 
-    user_id = _resolve_user_id(str(form.get("userId") or ""))
+    gateway_user_id = request.headers.get('x-user-id', '')
+    gateway_user_login = request.headers.get('x-user-login', '')
+    gateway_user_email = request.headers.get('x-user-email', '')
+
+    user_id = _resolve_user_id(str(form.get("userId") or gateway_user_id))
+    logger.info(
+        'convert_request user_id=%s gateway_user_id=%s gateway_user_login=%s gateway_user_email=%s',
+        user_id,
+        gateway_user_id,
+        gateway_user_login,
+        gateway_user_email,
+    )
+
     upload = form.get("zipFile") or form.get("file") or form.get("zip")
     if upload is None or not hasattr(upload, "file"):
         return _streaming_response(
