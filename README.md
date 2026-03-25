@@ -20,14 +20,28 @@ This folder contains a FastAPI implementation of the original Express API.
 python -m pip install -r requirements.txt
 ```
 
-3. Create `.env` (example below) and update values.
-4. Start the server:
+3. Create `config.yml` from `config.yml.example` and update values.
+4. (Optional) Use `.env` to override any config values.
+5. Start the server:
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
-## .env Example
+## config.yml Example
+
+```yml
+app_name: "Html2Dita Backend (FastAPI)"
+port: 8001
+base: "http://localhost:8001"
+mongodb_uri: "mongodb://localhost:27017"
+mongodb_db: "htmltodita"
+input_root: "input"
+output_root: "output"
+downloads_root: "downloads"
+```
+
+## Optional .env Overrides
 
 ```env
 PORT=8001
