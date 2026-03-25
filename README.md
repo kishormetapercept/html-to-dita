@@ -30,8 +30,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ## .env Example
 
 ```env
-PORT=8000
-BASE=http://localhost:8000
+PORT=8001
+BASE=http://localhost:8001
 MONGODB_URI=mongodb://localhost:27017
 MONGODB_DB=htmltodita
 ```
