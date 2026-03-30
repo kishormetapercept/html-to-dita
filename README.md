@@ -34,8 +34,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 app_name: "Html2Dita Backend (FastAPI)"
 port: 8001
 base: "http://localhost:8001"
-mongodb_uri: "mongodb://localhost:27017"
-mongodb_db: "htmltodita"
+postgres_uri: "host=localhost port=5432 dbname=postgres user=postgres password=admin connect_timeout=10 sslmode=prefer"
 input_root: "input"
 output_root: "output"
 downloads_root: "downloads"
@@ -46,8 +45,7 @@ downloads_root: "downloads"
 ```env
 PORT=8001
 BASE=http://localhost:8001
-MONGODB_URI=mongodb://localhost:27017
-MONGODB_DB=htmltodita
+POSTGRES_URI=host=localhost port=5432 dbname=postgres user=postgres password=admin connect_timeout=10 sslmode=prefer
 ```
 
 ## Conversion Flow (Single Streaming API)

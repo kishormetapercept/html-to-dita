@@ -1,4 +1,4 @@
-from functools import lru_cache
+﻿from functools import lru_cache
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import (
@@ -17,8 +17,10 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("BASE", "BASE_URL"),
     )
 
-    mongodb_uri: str = "mongodb://localhost:27017"
-    mongodb_db: str = "htmltodita"
+    postgres_uri: str = Field(
+        default="host=localhost port=5432 dbname=postgres user=postgres password=admin connect_timeout=10 sslmode=prefer",
+        validation_alias=AliasChoices("POSTGRES_URI", "POSTGRES_DSN", "DATABASE_URL"),
+    )
 
     input_root: str = "input"
     output_root: str = "output"

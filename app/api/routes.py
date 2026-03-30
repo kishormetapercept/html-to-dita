@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 import logging
 from pathlib import Path
@@ -10,7 +10,7 @@ from starlette.background import BackgroundTask
 
 from app.constants import messages as msg
 from app.core.config import get_settings
-from app.db.mongo import get_db
+from app.db.postgres import get_db
 from app.schemas.auth import TagItem
 from app.services.files import (
     create_zip_archive,
@@ -449,18 +449,23 @@ async def download(user_id: str, download_id: str):
 
 @router.post("/api/insertDitaTag")
 async def insert_dita_tags(tags: list[TagItem]):
-    db = get_db()
-    dita_tags = db["ditaTag"]
-
-    for tag in tags:
-        dita_tags.update_one({"key": tag.key}, {"$set": {"value": tag.value}}, upsert=True)
+    with get_db() as conn:
+        cursor = conn.cursor()
+        for tag in tags:
+            cursor.execute(
+                "INSERT INTO dita_tag (key, value) VALUES (%s, %s) "
+                "ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
+                (tag.key, tag.value),
+            )
 
     return _response(200, msg.TAGS_PROCESSED_SUCCESSFULLY)
 
-
 @router.get("/api/insertDitaTag")
 async def get_dita_tags():
-    db = get_db()
-    tags = [{"key": item["key"], "value": item["value"]} for item in db["ditaTag"].find({}, {"_id": 0})]
-    return _response(201, msg.TAGS_FETCHED_SUCCESSFULLY, tags=tags)
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT key, value FROM dita_tag ORDER BY key")
+        rows = cursor.fetchall()
 
+    tags = [{"key": row[0], "value": row[1]} for row in rows]
+    return _response(201, msg.TAGS_FETCHED_SUCCESSFULLY, tags=tags)
